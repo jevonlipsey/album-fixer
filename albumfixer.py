@@ -9,29 +9,30 @@ from mutagen import File
 import tkinter as tk
 from tkinter import filedialog
 
-# run with: python albumfixer.py -f "/path/to/music"
-# or just: python albumfixer.py
-#
-# add -l or --log to save terminal output to a file
-# e.g.: python albumfixer.py -f "/path/to/music" -l
+'''
+run with: python albumfixer.py -f "/path/to/music"
+or just: python albumfixer.py
+add -l/--log to save terminal output to a file
+e.g.: python albumfixer.py -f "/path/to/music" -l
 
-# -----------------------------------------------
+'''
+# ------
 # CONFIG
-# -----------------------------------------------
+# ------
 MAX_COVER_SIZE = (500, 500)
 COVER_FILENAMES = ["folder.jpg", "cover.jpg"]
 LRCLIB_URL = "https://lrclib.net/api/get"
 MUSICBRAINZ_SEARCH = "https://musicbrainz.org/ws/2/release-group/"
 COVERART_URL = "https://coverartarchive.org/release-group/"
 ITUNES_SEARCH = "https://itunes.apple.com/search"
-HEADERS = {"User-Agent": "RockboxAlbumFixer/2.5 (https://github.com/jevonlipsey)"}
+HEADERS = {"User-Agent": "AlbumFixer/1.0 (https://github.com/jevonlipsey)"}
 
-# -----------------------------------------------
-# LOGGER CLASS
-# -----------------------------------------------
+# ------
+# LOGGER
+# ------
 
 class Logger:
-    """A simple logger class to write to both terminal and a file."""
+    """logger that writes to both terminal and a log file."""
     def __init__(self, log_path):
         self.terminal = sys.stdout
         self.log = open(log_path, "a", encoding="utf-8")
@@ -45,9 +46,9 @@ class Logger:
         self.terminal.flush()
         self.log.flush()
 
-# -----------------------------------------------
+# -------
 # HELPERS
-# -----------------------------------------------
+# -------
 
 def fix_cover_for_rockbox(image_path):
     """Converts any JPEG/PNG/WebP into Rockbox-safe baseline JPEG."""
@@ -73,17 +74,17 @@ def fix_cover_for_rockbox(image_path):
                 progressive=False,
                 optimize=True,
             )
-            print(f"[FIX] | Rockbox-safe JPEG saved: {fixed_path}")
+            print(f"[FIX] | converted. baseline jpg saved: {fixed_path}")
             return fixed_path
     except UnidentifiedImageError:
-        print(f"[ERR] | Unreadable image: {image_path}")
+        print(f"[ERR] | unreadable image: {image_path}")
     except Exception as e:
-        print(f"[ERR] | Error fixing {image_path}: {e}")
+        print(f"[ERR] | error fixing {image_path}: {e}")
     return None
 
 
 def get_album_info_from_tag(audio_path):
-    """Extract artist and album from metadata."""
+    """extract artist and album from metadata."""
     try:
         audio = File(audio_path)
         if not audio:
@@ -104,8 +105,8 @@ def get_album_info_from_tag(audio_path):
 
 
 def _download_art_from_itunes(artist, album, dest_folder):
-    """Search Apple Music / iTunes API (strict). Used by helper."""
-    print(f"  [INFO] | Trying Apple Music as a fallback...")
+    """search itunes api. used by helper."""
+    print(f"  [INFO] | trying apple music as a fallback...")
     try:
         params = {
             "term": album,
@@ -119,7 +120,7 @@ def _download_art_from_itunes(artist, album, dest_folder):
         data = res.json()
 
         if data["resultCount"] == 0:
-            print("  [WARN] | No Apple Music match found.")
+            print("  [WARN] | no apple music match found.")
             return None
             
         art_url = data["results"][0]["artworkUrl100"].replace("100x100bb", "1200x1200bb")
@@ -129,16 +130,16 @@ def _download_art_from_itunes(artist, album, dest_folder):
             dest_path = os.path.join(dest_folder, "folder.jpg")
             with open(dest_path, "wb") as f:
                 f.write(img_data.content)
-            print(f"  [ART] | Downloaded art from Apple Music.")
+            print(f"  [ART] | downloaded art from apple music.")
             return dest_path
             
     except Exception as e:
-        print(f"  [ERR] | Error downloading from Apple Music: {e}")
+        print(f"  [ERR] | error downloading from apple music: {e}")
         return None
 
 
 def download_album_art(artist, album, dest_folder):
-    """Search MusicBrainz Release Groups for album cover."""
+    """search musicbrainz release groups for album cover."""
     print(f"[INFO] | Searching MusicBrainz: Artist='{artist}', Album='{album}'")
     try:
         params = {
@@ -150,7 +151,7 @@ def download_album_art(artist, album, dest_folder):
         data = res.json()
         
         if not data.get("release-groups"):
-            print(f"[WARN] | No MusicBrainz release group found.")
+            print(f"[WARN] | no musicbrainz release group found.")
             return None
 
         release_group_id = data["release-groups"][0]["id"]
@@ -161,19 +162,19 @@ def download_album_art(artist, album, dest_folder):
             dest_path = os.path.join(dest_folder, "folder.jpg")
             with open(dest_path, "wb") as f:
                 f.write(img_data.content)
-            print(f"[ART] | Downloaded art from MusicBrainz/CAA.")
+            print(f"[ART] | downloaded art from musicbrainz.")
             return dest_path
         else:
-            print(f"[WARN] | No cover art found on CAA.")
+            print(f"[WARN] | no cover art found on musicbrainz.")
             return None
             
     except Exception as e:
-        print(f"[ERR] | Error downloading from MusicBrainz: {e}")
+        print(f"[ERR] | error downloading from musicbrainz: {e}")
         return None
 
 
 def download_lyrics(artist, title, dest_folder):
-    """Download lyrics from lrclib.net and save .lrc or .txt."""
+    """download lyrics from lrclib.net and save .lrc or .txt."""
     try:
         params = {"artist_name": artist, "track_name": title}
         res = requests.get(LRCLIB_URL, params=params, timeout=10)
@@ -199,20 +200,20 @@ def download_lyrics(artist, title, dest_folder):
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(lyrics)
             
-        print(f"  [LRC] | Saved {lyric_type} lyrics for: {safe_title}")
+        print(f"  [LRC] | saved {lyric_type} lyrics for: {safe_title}")
         return file_path
     except Exception as e:
-        print(f"  [ERR] | Error fetching lyrics for {artist} - {title}: {e}")
+        print(f"  [ERR] | error fetching lyrics for {artist} - {title}: {e}")
         return None
 
 def sanitize_filename(name):
-    """Removes invalid characters for filenames."""
+    """removes invalid characters for filenames."""
     safe_name = "".join(c for c in name if c.isalnum() or c in " -_()").strip()
     safe_name = safe_name.replace("..", "").strip().rstrip(".")
     return safe_name
 
 def parse_base_album_name(album_name):
-    """Tries to find the 'base' album name by stripping deluxe tags."""
+    """tries to find the 'base' album name by stripping deluxe tags."""
     delimiters = [' (', ' [', ' - ']
     base_name = album_name
     
@@ -228,62 +229,61 @@ def parse_base_album_name(album_name):
     return base_name
 
 def interactive_art_fix(artist, album, album_folder):
-    """A CLI helper to manually fix a failed art search."""
-    print(f"\n[WARN] | Automatic search failed for: \"{artist} - {album}\"")
-    print("This is often due to a typo or a deluxe title (e.g., 'On the Run' vs 'On the Rvn').")
-    
+    """a cli helper to manually fix a failed art search."""
+    print(f"\n[WARN] | automatic search failed for: \"{artist} - {album}\"")
+        
     while True:
-        print("\nWhat would you like to do?")
-        print("(1) Try a new search")
-        print("(2) Skip art for this album")
-        choice = input("Enter choice (1-2): ").strip()
+        print("\nwhat would you like to do?")
+        print("(1) try a new search")
+        print("(2) skip art for this album")
+        choice = input("enter choice (1-2): ").strip()
 
         if choice == "2":
-            print("[INFO] | Skipping cover art for this album.")
+            print("[INFO] | skipping cover art for this album.")
             return None
         elif choice == "1":
             try:
-                print(f"\nCurrent Artist: \"{artist}\"")
-                new_artist = input(f"Enter new Artist (or press Enter to keep): ").strip()
+                print(f"\ncurrent artist: \"{artist}\"")
+                new_artist = input(f"enter new artist (or press enter to keep): ").strip()
                 if not new_artist:
                     new_artist = artist
                 
-                print(f"\nCurrent Album: \"{album}\"")
-                new_album = input(f"Enter new Album: ").strip()
+                print(f"\ncurrent album: \"{album}\"")
+                new_album = input(f"enter new album: ").strip()
                 if not new_album:
-                    print("[WARN] | Album name cannot be empty. Please try again.")
+                    print("[WARN] | album name cannot be empty. please try again.")
                     continue
 
                 base_new_album = parse_base_album_name(new_album)
-                print(f"\n[INFO] | Re-running search (will try '{base_new_album}' first)...")
+                print(f"\n[INFO] | re-running search (will try '{base_new_album}' first)...")
 
                 new_cover_path = download_album_art(new_artist, base_new_album, album_folder)
 
                 if not new_cover_path and base_new_album != new_album:
-                    print(f"[INFO] | Base name failed. Trying full literal name: '{new_album}'")
+                    print(f"[INFO] | base name failed. trying full literal name: '{new_album}'")
                     new_cover_path = download_album_art(new_artist, new_album, album_folder)
                 
                 if not new_cover_path:
-                    print(f"[INFO] | MusicBrainz failed. Helper is trying Apple Music...")
+                    print(f"[INFO] | musicbrainz failed. helper is trying apple music...")
                     new_cover_path = _download_art_from_itunes(new_artist, base_new_album, album_folder)
                 
                 if not new_cover_path and base_new_album != new_album:
                     new_cover_path = _download_art_from_itunes(new_artist, new_album, album_folder)
 
                 if new_cover_path:
-                    print("[INFO] | Manual search successful.")
+                    print("[INFO] | manual search successful.")
                     return new_cover_path
                 else:
-                    print("[WARN] | Manual search failed with all sources. Please try again.")
+                    print("[WARN] | manual search failed with all sources. please try again.")
                     
             except Exception as e:
-                print(f"[ERR] | An error occurred during manual search: {e}")
+                print(f"[ERR] | an error occurred during manual search: {e}")
         else:
-            print("[WARN] | Invalid choice. Please enter '1' or '2'.")
+            print("[WARN] | invalid choice. enter '1' or '2'.")
 
 
 def process_album_folder(album_folder, root_music_dir):
-    """Ensure cover art + lyrics exist for a given album folder."""
+    """ensure cover art + lyrics exist for a given album folder."""
     
     audio_files = [
         f for f in os.listdir(album_folder) if f.lower().endswith((".flac", ".mp3"))
@@ -291,7 +291,7 @@ def process_album_folder(album_folder, root_music_dir):
     if not audio_files:
         return False
 
-    print(f"\n--- Processing: {album_folder} ---")
+    print(f"\n--- processing: {album_folder} ---")
     
     current_folder_name = os.path.basename(album_folder)
     name_parts = current_folder_name.split(" - ", 1)
@@ -302,18 +302,18 @@ def process_album_folder(album_folder, root_music_dir):
     if len(name_parts) == 2:
         artist = name_parts[0].strip()
         album = name_parts[1].strip()
-        print(f"[INFO] | Using folder name for search: Artist='{artist}', Album='{album}'")
+        print(f"[INFO] | using folder name for search: artist='{artist}', album='{album}'")
         if not tag_artist:
             tag_artist = artist
     elif tag_artist and tag_album:
         artist = tag_artist
         album = tag_album
-        print(f"[INFO] | Using file tags for search: Artist='{artist}', Album='{album}'")
+        print(f"[INFO] | using file tags for search: artist='{artist}', album='{album}'")
     else:
-        print("[WARN] | Could not find artist/album from folder or tags. Skipping.")
+        print("[WARN] | could not find artist/album from folder or tags. skipping.")
         return False
 
-    # 2. Cover art
+    # get cover art
     cover_found = False
     for cover_name in COVER_FILENAMES:
         cover_path = os.path.join(album_folder, cover_name)
@@ -325,15 +325,13 @@ def process_album_folder(album_folder, root_music_dir):
     if not cover_found:
         base_album = parse_base_album_name(album)
         
-        if base_album == album:
-            print(f"[INFO] | No delimiters found. Trying full name as base.")
-        else:
-            print(f"[INFO] | Found delimiters. Trying base name: '{base_album}'")
+        if base_album != album:
+            print(f"[INFO] | found delimiters. trying base name: '{base_album}'")
         
         new_cover = download_album_art(artist, base_album, album_folder)
 
         if not new_cover and base_album != album:
-            print(f"[INFO] | Base name failed. Trying full literal name: '{album}'")
+            print(f"[INFO] | base name failed. trying full literal name: '{album}'")
             new_cover = download_album_art(artist, album, album_folder)
         
         if not new_cover:
@@ -342,8 +340,8 @@ def process_album_folder(album_folder, root_music_dir):
         if new_cover:
             fix_cover_for_rockbox(new_cover)
 
-    # 3. Lyrics
-    print("  Checking for lyrics...")
+    # get lyrics
+    print("  checking for lyrics...")
     for audio_file in audio_files:
         track_path = os.path.join(album_folder, audio_file)
         try:
@@ -365,10 +363,10 @@ def process_album_folder(album_folder, root_music_dir):
                     tag_artist = artist
                 download_lyrics(tag_artist, title, album_folder)
         except Exception as e:
-            print(f"  [ERR] | Error processing track {audio_file}: {e}")
+            print(f"  [ERR] | error processing track {audio_file}: {e}")
 
-    # 4. Rename audio files
-    print("  Renaming audio files...")
+    #  cleanup audio file names
+    print("  renaming audio files...")
     for audio_file in audio_files:
         track_path = os.path.join(album_folder, audio_file)
         try:
@@ -381,7 +379,7 @@ def process_album_folder(album_folder, root_music_dir):
             track_num_raw = audio.get("tracknumber")
             
             if not title:
-                print(f"    [WARN] | Skipping rename for {audio_file}, no title tag.")
+                print(f"    [WARN] | skipping rename for {audio_file}, no title tag.")
                 continue
 
             track_num_str = "00"
@@ -396,13 +394,13 @@ def process_album_folder(album_folder, root_music_dir):
             
             if track_path != new_path:
                 os.rename(track_path, new_path)
-                print(f"    Renamed: {audio_file} -> {new_name}")
+                print(f"    renamed: {audio_file} -> {new_name}")
 
         except Exception as e:
-            print(f"    [ERR] | Error renaming {audio_file}: {e}")
+            print(f"    [ERR] | rrror renaming {audio_file}: {e}")
             
-    # 5. Organize and Move the folder
-    print("  Organizing folder...")
+    # organize folder structure
+    print("  organizing folder...")
     try:
         current_folder_name = os.path.basename(album_folder)
         name_parts = current_folder_name.split(" - ", 1)
@@ -412,7 +410,7 @@ def process_album_folder(album_folder, root_music_dir):
             new_album_name = sanitize_filename(name_parts[1].strip())
             
             if not artist_name or not new_album_name:
-                print(f"    [WARN] | Could not extract valid artist/album name from '{current_folder_name}'. Skipping organization.")
+                print(f"    [WARN] | could not extract valid artist/album name from '{current_folder_name}'. skipping organization.")
                 return True
             
             artist_folder_path = os.path.join(root_music_dir, artist_name)
@@ -421,27 +419,27 @@ def process_album_folder(album_folder, root_music_dir):
             final_album_path = os.path.join(artist_folder_path, new_album_name)
             
             if os.path.abspath(album_folder) == os.path.abspath(final_album_path):
-                print("    Folder is already correctly organized.")
+                print("    folder is already correctly organized.")
                 return True
 
             if os.path.exists(final_album_path):
-                print(f"    [WARN] | Cannot move folder, destination already exists: {final_album_path}")
+                print(f"    [WARN] | cannot move folder, destination already exists: {final_album_path}")
                 return False
             else:
                 shutil.move(album_folder, final_album_path)
-                print(f"  [MV] | Moved and renamed folder to: {final_album_path}")
+                print(f"  [MV] | moved and renamed folder to: {final_album_path}")
                 return True
         else:
-            print(f"    [WARN] | Folder name '{current_folder_name}' does not match 'Artist - Album' format. Skipping organization.")
+            print(f"    [WARN] | folder name '{current_folder_name}' does not match 'Artist - Album' format. skipping organization.")
             return True
 
     except Exception as e:
-        print(f"    [ERR] | Error organizing folder: {e}")
+        print(f"    [ERR] | error organizing folder: {e}")
         return False
 
 
 def process_music_library(root_dir):
-    """Walk through all subfolders and process each album folder."""
+    """walk through all subfolders and process each album folder."""
     
     album_folders = []
     # walk folders "bottom-up" to safely rename/move parents
@@ -459,50 +457,47 @@ def process_music_library(root_dir):
                 album_folders.append(root)
             
     if not album_folders:
-        print("[WARN] | No album folders with audio files found.")
+        print("[WARN] | no album folders with audio files found.")
         return
 
-    print(f"Found {len(album_folders)} album folders to process...")
+    print(f"found {len(album_folders)} album folders to process...")
     album_folders.sort() 
     
     for folder_path in album_folders:
         process_album_folder(folder_path, root_dir)
 
-# -----------------------------------------------
+# ----
 # MAIN
-# -----------------------------------------------
+# ----
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Clean and organize music albums for Rockbox.")
+    parser = argparse.ArgumentParser(description="clean and organize music albums for rockbox.")
     parser.add_argument(
         "-f", "--folder", 
-        help="Path to the music root directory. If not provided, a pop-up dialog will ask for it."
+        help="path to the music root directory. if not provided, a gui will open for selection."
     )
-    # NEW: Log argument
     parser.add_argument(
         "-l", "--log",
         action="store_true",
-        help="Save terminal output to a timestamped log file in the root directory."
+        help="save terminal output to a timestamped log file in the root directory."
     )
     args = parser.parse_args()
     
     root_directory = args.folder
 
     if not root_directory:
-        print("No folder provided via -f flag, opening GUI dialog...")
         try:
             root = tk.Tk()
             root.withdraw()
-            root_directory = filedialog.askdirectory(title="Select Music Root Directory")
+            root_directory = filedialog.askdirectory(title="select music root directory")
         except Exception as e:
-            print(f"[ERR] | GUI dialog failed: {e}")
-            print("Please run the script with the -f flag, e.g.: python albumfixer.py -f '/path/to/music'")
+            print(f"[ERR] | gui dialog failed: {e}")
+            print("please run the script with the -f flag, e.g.: python albumfixer.py -f '/path/to/music'")
             sys.exit(1)
 
     if not root_directory:
-        print("\nNo directory selected. Exiting.")
+        print("\nno directory selected, exiting.")
     else:
-        # NEW: Setup logging if the flag is present
         if args.log:
             try:
                 log_name = f"albumfixer_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
@@ -510,11 +505,11 @@ if __name__ == "__main__":
                 # redirect stdout and stderr to the logger
                 sys.stdout = Logger(log_path)
                 sys.stderr = sys.stdout
-                print(f"Logging terminal output to: {log_path}\n")
+                print(f"logging output to: {log_path}\n")
             except Exception as e:
-                print(f"[ERR] | Failed to create log file: {e}")
+                print(f"[ERR] | failed to create log file: {e}")
                 # continue without logging
         
-        print(f"\nStarting Rockbox fix for: {root_directory}")
+        print(f"\nstarting album fix for: {root_directory}")
         process_music_library(root_directory)
         print("\nAll albums processed. Done.")
