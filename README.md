@@ -3,6 +3,10 @@
 A simple command-line tool for organizing music libraries and preparing them for music players.
 I wrote this for intended use with rockbox + online album downloaders!
 
+[![Demo GIF](https://i.imgur.com/ynkAgdS.gif)](https://youtu.be/LqGWlHftctU)
+
+Click the GIF to watch the full script demo. 
+
 ## What It Does
 
 - **Renames Files**: Cleans up track names to `01 - Track Title.flac` format using the file's metadata
